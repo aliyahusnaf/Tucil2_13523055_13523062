@@ -372,9 +372,9 @@ void saveImage(const vector<vector<RGB>>& img, const std::string& filename) {
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             RGBQUAD color;
-            color.rgbRed = img[y][x][0];
-            color.rgbGreen = img[y][x][1];
-            color.rgbBlue = img[y][x][2];
+            color.rgbRed = img[height - 1 - y][x][0]; // Pembalikan posisi y
+            color.rgbGreen = img[height - 1 - y][x][1]; // Pembalikan posisi y
+            color.rgbBlue = img[height - 1 - y][x][2]; // Pembalikan posisi y
 
             FreeImage_SetPixelColor(bitmap, x, y, &color);
         }

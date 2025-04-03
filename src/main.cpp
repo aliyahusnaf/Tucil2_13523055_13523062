@@ -3,8 +3,8 @@
 using namespace std;
 
 int main() {
-    string image_path = "C:/Users/ASUS/Downloads/S__4022279.jpg";
-    //"C:/Users/ASUS/Downloads/test.jpeg"; 
+    string image_path = //"C:/Users/ASUS/Downloads/S__4022279.jpg";
+    "C:/Users/ASUS/Downloads/test.jpeg"; 
     int width, height;
     int threshold;
     int min_size;
