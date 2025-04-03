@@ -1,7 +1,9 @@
 #include "headers/preprocessor.h"
 #include <iostream>
+#include <map>
 #include <cmath>
 #include <fstream>
+#include <queue>
 #include <FreeImage.h> 
 #include "headers/json.hpp"
 
@@ -77,6 +79,104 @@ double calVariance(const vector<vector<RGB>>& img, int x, int y, int size) {
     return var / N;
 }
 
+// Hitung MAD dalam blok RGB
+double calMAD(const vector<vector<RGB>>& img, int x, int y, int size) {
+    long totR = 0, totG = 0, totB = 0;
+    int N = size * size;
+
+    for (int i = y; i < y + size; i++) {
+        for (int j = x; j < x + size; j++) {
+            totR += img[i][j][0];
+            totG += img[i][j][1];
+            totB += img[i][j][2];
+        }
+    }
+
+    double avgR = totR / (double)N;
+    double avgG = totG / (double)N;
+    double avgB = totB / (double)N;
+    double mad = 0.0;
+
+    for (int i = y; i < y + size; i++) {
+        for (int j = x; j < x + size; j++) {
+            mad += abs(img[i][j][0] - avgR);
+            mad += abs(img[i][j][1] - avgG);
+            mad += abs(img[i][j][2] - avgB);
+        }
+    }
+
+    return mad / N;
+}
+
+// Hitung max diff dalam blok RGB
+double calMaxDiff(const vector<vector<RGB>>& img, int x, int y, int size) {
+    int minR = 255, minG = 255, minB = 255;
+    int maxR = 0, maxG = 0, maxB = 0;
+
+    for (int i = y; i < y + size; i++) {
+        for (int j = x; j < x + size; j++) {
+            minR = min(minR, img[i][j][0]);
+            minG = min(minG, img[i][j][1]);
+            minB = min(minB, img[i][j][2]);
+
+            maxR = max(maxR, img[i][j][0]);
+            maxG = max(maxG, img[i][j][1]);
+            maxB = max(maxB, img[i][j][2]);
+        }
+    }
+
+    return max({maxR - minR, maxG - minG, maxB - minB});
+}
+
+// Hitung entropy dalam blok RGB
+// double calEntropy(const vector<vector<RGB>>& img, int x, int y, int size) {
+//     map<int, int> histogram;
+//     int N = size * size;
+
+//     for (int i = y; i < y + size; i++) {
+//         for (int j = x; j < x + size; j++) {
+//             int intensity = (img[i][j][0] + img[i][j][1] + img[i][j][2]) / 3;
+//             histogram[intensity]++;
+//         }
+//     }
+
+//     double entropy = 0.0;
+//     for (const auto& pair : histogram) {  
+//         int intensity = pair.first;  // Key dari map
+//         int count = pair.second;     // Value dari map
+//         double p = count / (double)N;
+//         entropy -= p * log2(p);
+//     }
+
+//     return entropy;
+// }
+double calEntropy(const vector<vector<RGB>>& img, int x, int y, int size) {
+    map<int, int> histogram;
+    int N = size * size;
+
+    // Hitung histogram intensitas
+    for (int i = y; i < y + size; i++) {
+        for (int j = x; j < x + size; j++) {
+            int intensity = round((img[i][j][0] + img[i][j][1] + img[i][j][2]) / 3.0);  // Pakai floating-point division
+            histogram[intensity]++;
+        }
+    }
+
+    double entropy = 0.0;
+    for (const auto& pair : histogram) {
+        double p = (double)pair.second / N; // Pastikan ini `double`
+        if (p > 0) { 
+            entropy -= p * log2(p);
+        }
+    }
+
+    // Debug: Cek hasil entropy sebelum thresholding
+    std::cout << "Entropy at (" << x << "," << y << ") size " << size << " = " << entropy << std::endl;
+
+    return entropy;
+}
+
+
 // Hitung rata-rata RGB dari node leaf buat normalisasi
 RGB avgColor(const vector<vector<RGB>>& img, int x, int y, int size) {
     double sum[3] = {0};
@@ -94,8 +194,62 @@ RGB avgColor(const vector<vector<RGB>>& img, int x, int y, int size) {
 }
 
 // Bangun Quadtree dan simpan ke array of Node
-void buildQuadtree(const vector<vector<RGB>>& image, int x, int y, int size, double threshold, int min_size, vector<Node>& tree) {
-    double var = calVariance(image, x, y, size);
+void buildQuadtree(const vector<vector<RGB>>& image, int x, int y, int size, double threshold, int min_size, vector<Node>& tree, int errorMethod) {
+
+    double var;
+
+    // Pilih metode error yang digunakan
+    if (errorMethod == 1 ) {
+        var = calVariance(image, x, y, size);
+    } else if (errorMethod == 2) {
+        var = calMAD(image, x, y, size);
+    } else if (errorMethod == 3) {
+        var = calMaxDiff(image, x, y, size);
+    } else if (errorMethod == 4) {
+        var = calEntropy(image, x, y, size);
+    } else {
+        cerr << "Error: Metode " << errorMethod << " tidak dikenal!" << endl;
+        return;
+    }
+    // if (size <= min_size || var < threshold) {
+    //     Node n;
+    //     n.x = x;
+    //     n.y = y;
+    //     n.size = size;
+    //     n.isLeaf = true;
+    //     n.color[0] = 0;  // Misalnya set warna default hitam
+    //     n.color[1] = 0;
+    //     n.color[2] = 0;  // Tentukan warna berdasarkan perhitungan rata-rata atau entropy
+    //     std::fill(std::begin(n.children), std::end(n.children), -1);  // Tidak ada children untuk leaf
+    //     tree.push_back(n);
+    // } else {
+    //     // Jika perlu melakukan rekursi untuk subdivisi lebih lanjut
+    //     int halfSize = size / 2;
+    //     int childTL = tree.size();
+    //     buildQuadtree(image, x, y, halfSize, threshold, min_size, tree, errorMethod);  // Top Left
+    //     int childTR = tree.size();
+    //     buildQuadtree(image, x + halfSize, y, halfSize, threshold, min_size, tree, errorMethod);  // Top Right
+    //     int childBL = tree.size();
+    //     buildQuadtree(image, x, y + halfSize, halfSize, threshold, min_size, tree, errorMethod);  // Bottom Left
+    //     int childBR = tree.size();
+    //     buildQuadtree(image, x + halfSize, y + halfSize, halfSize, threshold, min_size, tree, errorMethod);  // Bottom Right
+        
+    //     // Setelah rekursi, buat node non-leaf dan set children
+    //     Node n;
+    //     n.x = x;
+    //     n.y = y;
+    //     n.size = size;
+    //     n.isLeaf = false;
+    //     n.color[0] = 0;  // Misalnya set warna default hitam
+    //     n.color[1] = 0;
+    //     n.color[2] = 0;  // Tentukan warna berdasarkan perhitungan rata-rata atau entropy
+    //     n.children[0] = childTL;
+    //     n.children[1] = childTR;
+    //     n.children[2] = childBL;
+    //     n.children[3] = childBR;
+        
+    //     tree.push_back(n);
+    // }
 
     Node node;
     node.x = x;
@@ -118,15 +272,24 @@ void buildQuadtree(const vector<vector<RGB>>& image, int x, int y, int size, dou
 
     if (!node.isLeaf) {
         int half = size / 2; // 8x8 jadi 4x4
-        // set x,y tetep jd kiri atas
-        buildQuadtree(image, x, y, half, threshold, min_size, tree);              // TL
-        buildQuadtree(image, x + half, y, half, threshold, min_size, tree);       // TR
-        buildQuadtree(image, x, y + half, half, threshold, min_size, tree);       // BL
-        buildQuadtree(image, x + half, y + half, half, threshold, min_size, tree); // BR
+        int childIndex[4];
 
-        // tree[curr_index] = parent, dibikinin anak lg karena masih di atas threshold/besar 
+        // Simpan indeks setelah rekursi untuk memastikan benar
+        childIndex[0] = tree.size();
+        buildQuadtree(image, x, y, half, threshold, min_size, tree, errorMethod);              // TL
+        
+        childIndex[1] = tree.size();
+        buildQuadtree(image, x + half, y, half, threshold, min_size, tree, errorMethod);       // TR
+        
+        childIndex[2] = tree.size();
+        buildQuadtree(image, x, y + half, half, threshold, min_size, tree, errorMethod);       // BL
+        
+        childIndex[3] = tree.size();
+        buildQuadtree(image, x + half, y + half, half, threshold, min_size, tree, errorMethod); // BR
+
+        // Update indeks anak dengan benar setelah semua rekursi selesai
         for (int i = 0; i < 4; ++i)
-            tree[curr_index].children[i] = curr_index + i + 1;
+            tree[curr_index].children[i] = childIndex[i];
     }
 }
 
@@ -166,4 +329,60 @@ int getDepth(const vector<Node>& tree, int index = 0) {
         }
     }
     return 1 + maxDepth;
+}
+
+void fillImage(vector<vector<RGB>> &img, const vector<Node> &nodes, int nodeIdx) {
+    if (nodeIdx == -1) return; // Tidak ada node
+
+    const Node &node = nodes[nodeIdx]; // Ambil node berdasarkan indeks
+    int x = node.x, y = node.y, size = node.size;
+
+    if (node.isLeaf) {
+        RGB color = {node.color[0], node.color[1], node.color[2]};
+        for (int i = y; i < min(y + size, (int)img.size()); i++) {
+            for (int j = x; j < min(x + size, (int)img[0].size()); j++) {
+                img[i][j] = color; // Pastikan setiap piksel benar-benar diisi
+            }
+        }
+    } else {
+        // Rekursi untuk setiap anak node
+        for (int i = 0; i < 4; i++) {
+            if (node.children[i] != -1) {
+                fillImage(img, nodes, node.children[i]);
+            }
+        }
+    }
+}
+
+vector<vector<RGB>> quadtreeToImage(const vector<Node> &nodes, int rootIdx, int width, int height) {
+    vector<vector<RGB>> img(height, vector<RGB>(width, {0, 0, 0}));
+    fillImage(img, nodes, rootIdx);
+    return img;
+}
+
+
+void saveImage(const vector<vector<RGB>>& img, const std::string& filename) {
+    int width = img[0].size();
+    int height = img.size();
+
+    // Buat bitmap kosong
+    FIBITMAP* bitmap = FreeImage_Allocate(width, height, 24);
+
+    // Masukkan data piksel ke bitmap
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            RGBQUAD color;
+            color.rgbRed = img[y][x][0];
+            color.rgbGreen = img[y][x][1];
+            color.rgbBlue = img[y][x][2];
+
+            FreeImage_SetPixelColor(bitmap, x, y, &color);
+        }
+    }
+
+    // Simpan gambar ke file
+    FreeImage_Save(FIF_PNG, bitmap, filename.c_str(), 0);
+
+    // Hapus bitmap dari memori
+    FreeImage_Unload(bitmap);
 }
