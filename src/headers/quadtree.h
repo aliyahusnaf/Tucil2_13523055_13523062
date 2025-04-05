@@ -8,8 +8,8 @@
 
 Node* createNode(int x, int y, int width, int height);
 
-void buildQuadtree(const std::vector<std::vector<RGB>>& image, Node* node, 
-                   double threshold, int min_size, int errorMethod);
+void buildQuadtree(const std::vector<std::vector<RGB>>& image, Node* node, double threshold, int min_size,
+                   int errorMethod, bool createGIF);
 
 void save_to_json(const Node* root, const std::string& filename);
 
@@ -17,5 +17,8 @@ int getDepth(Node* node);
 
 RGB avgColor(const std::vector<std::vector<RGB>>& img, int x, int y, int width, int size);
 
+int countNodes(Node* node);
+
+void generateGifFromSteps(const std::string& frameDir, const std::string& gifPath);
 
 #endif

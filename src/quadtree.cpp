@@ -4,12 +4,16 @@
 #include <fstream>
 #include <queue>
 #include <FreeImage.h> 
+#include <sstream>
 #include "headers/json.hpp"
 #include "headers/quadtree.h"
 #include "headers/errorcounter.h"
+#include <functional> 
 
 using json = nlohmann::json;
 using namespace std;
+
+Node* rootNodeGlobal = nullptr;
 
 Node* createNode(int x, int y, int width, int height) {
     Node* node = new Node;
@@ -50,14 +54,16 @@ RGB avgColor(const vector<vector<RGB>>& img, int x, int y, int width, int height
 }
 
 // Bangun Quadtree dan simpan ke array of Node
-void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshold, int min_size, int errorMethod) {
+void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshold, int min_size,
+                   int errorMethod, bool createGIF) {
     if (node == nullptr) return;
-    
+
     int x = node->x;
     int y = node->y;
     int width = node->width;
     int height = node->height;
-    
+    node->avgColor = avgColor(image, x, y, width, height);
+
     double var;
     if (errorMethod == 1) {
         var = calVariance(image, x, y, width, height);
@@ -71,29 +77,28 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshol
         cerr << "Error: Metode " << errorMethod << " tidak dikenal!" << endl;
         return;
     }
-    
+
     bool isLeaf = (var <= threshold || width <= min_size || height <= min_size);
     node->isLeaf = isLeaf;
-    
+
     if (isLeaf) {
         node->avgColor = avgColor(image, x, y, width, height);
     } else {
         int halfWidth = width / 2;
         int halfHeight = height / 2;
-        
+
         if (halfWidth < min_size || halfHeight < min_size) {
             node->isLeaf = true;
-            node->avgColor = avgColor(image, x, y, width, height);
             return;
         }
-        
+
         node->children[0] = createNode(x, y, halfWidth, halfHeight); // TL
         node->children[1] = createNode(x + halfWidth, y, width - halfWidth, halfHeight); // TR
         node->children[2] = createNode(x, y + halfHeight, halfWidth, height - halfHeight); // BL
         node->children[3] = createNode(x + halfWidth, y + halfHeight, width - halfWidth, height - halfHeight); // BR
-        
+
         for (int i = 0; i < 4; ++i) {
-            buildQuadtree(image, node->children[i], threshold, min_size, errorMethod);
+            buildQuadtree(image, node->children[i], threshold, min_size, errorMethod, createGIF);
         }
     }
 }
@@ -149,4 +154,29 @@ int getDepth(Node* node) {
         maxDepth = max(maxDepth, getDepth(node->children[i]));
     }
     return 1 + maxDepth;
+}
+
+int countNodes(Node* node) {
+    if (!node) return 0;
+    int count = 1;
+    for (int i = 0; i < 4; ++i) {
+        count += countNodes(node->children[i]);
+    }
+    return count;
+}
+
+void generateGifFrames(const std::vector<std::vector<RGB>>& originalImage, Node* root, const std::string& frameDir) {
+   
+    int maxDepth = getDepth(root);
+    
+    for (int depth = 0; depth <= maxDepth; depth++) {
+       
+        std::vector<std::vector<RGB>> frame(originalImage.size(), std::vector<RGB>(originalImage[0].size()));
+        
+        fillImageWithDepthLimit(frame, root, depth);
+        
+        std::stringstream ss;
+        ss << frameDir << "/step_" << std::setw(4) << std::setfill('0') << depth << ".png";
+        saveImage(frame, ss.str());
+    }
 }

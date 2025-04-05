@@ -3,63 +3,92 @@
 #include <cmath>
 #include <fstream>
 #include <queue>
+#include <sstream>
 #include <vector>
 #include <FreeImage.h>
 #include "headers/json.hpp"
 #include "headers/inout.h"
 #include "headers/quadtree.h"
 #include "headers/errorcounter.h"
-
 using json = nlohmann::json;
 using namespace std;
 
 int main() {
-    string image_path = "/Users/aliyahusnafayyaza/Downloads/S__19775494.jpg";
-    int width, height;
+    string image_path, output_image_path, output_gif_path;
+    int method, min_size;
     double threshold;
-    int min_size;
-    int method;
-
-    cout << "Masukkan threshold: ";
-    cin >> threshold;
-    cout << "Masukkan ukuran minimum: ";
-    cin >> min_size;
+    
+    cout << "Masukkan path gambar input absolut: ";
+    cin >> image_path;
     cout << "Metode Error : \n1. Variance \n2. MAD \n3. MaxDiff \n4. Entropy\n";
     cout << "Pilih metode error (1,2,3,4): ";
     cin >> method;
-
+    cout << "Masukkan threshold: ";
+    cin >> threshold;
+    cout << "Masukkan ukuran blok minimum: ";
+    cin >> min_size;
+    cout << "Masukkan path output gambar hasil: ";
+    cin >> output_image_path;
+    cout << "Masukkan path output GIF proses (kosongkan jika tidak ingin GIF): ";
+    cin.ignore();
+    getline(cin, output_gif_path);
+    
     // Muat gambar
+    int width, height;
     auto image = loadImage(image_path, width, height);
-    cout << "Gambar dimuat: " << width << "x" << height << endl;
-
     if (image.empty()) {
         cerr << "Gagal memuat gambar!" << endl;
         return 1;
     }
-
-    // Buat root node
+    
+    cout << "Gambar dimuat: " << width << "x" << height << endl;
+    
+ 
+    auto start = chrono::high_resolution_clock::now();
+    
     Node* root = createNode(0, 0, width, height);
 
-    // Bangun quadtree mulai dari root
-    buildQuadtree(image, root, threshold, min_size, method);
-    cout << "Quadtree terbentuk\n";
-
-    // Hitung kedalaman pohon
-    int depth = getDepth(root);
-    cout << "Kedalaman pohon: " << depth << endl;
-
-    // Simpan ke JSON
-    save_to_json(root, "output.json");
-    cout << "Hasil disimpan ke output.json\n";
-
-    // Rekonstruksi gambar
+    string stepFrameDir = "steps";
+    bool gifMode = !output_gif_path.empty();
+    
+    buildQuadtree(image, root, threshold, min_size, method, false);
+    
+    auto end = chrono::high_resolution_clock::now();
+    chrono::duration<double> duration = end - start;
+    
+  
     vector<vector<RGB>> reconstructedImage(height, vector<RGB>(width));
     fillImage(reconstructedImage, root);
-    saveImage(reconstructedImage, "output.png");
-    cout << "Gambar hasil disimpan ke output.png" << endl;
-
-    // Pembersihan memori (opsional, tergantung implementasi)
-    // Anda mungkin perlu membuat fungsi untuk menghapus seluruh pohon
-
+    saveImage(reconstructedImage, output_image_path);
+    
+    
+    cout << "Waktu eksekusi: " << duration.count() << " detik\n";
+    
+    ifstream inOriginal(image_path, ios::binary | ios::ate);
+    ifstream inCompressed(output_image_path, ios::binary | ios::ate);
+    auto sizeBefore = inOriginal.tellg();
+    auto sizeAfter = inCompressed.tellg();
+    double compressionRatio = 1.0 - (double)sizeAfter / sizeBefore;
+    
+    cout << "Ukuran gambar sebelum: " << sizeBefore << " bytes\n";
+    cout << "Ukuran gambar setelah: " << sizeAfter << " bytes\n";
+    cout << "Persentase kompresi: " << (compressionRatio * 100) << "%\n";
+    
+    int depth = getDepth(root);
+    int nodeCount = countNodes(root);
+    
+    cout << "Kedalaman pohon: " << depth << endl;
+    cout << "Banyak simpul: " << nodeCount << endl;
+    
+    if (gifMode) {
+        system(("rm -rf " + stepFrameDir).c_str());
+        system(("mkdir -p " + stepFrameDir).c_str());
+        
+        generateGifFrames(image, root, stepFrameDir);
+        
+        generateGifFromSteps(stepFrameDir, output_gif_path);
+        cout << "GIF proses kompresi disimpan ke " << output_gif_path << endl;
+    }
+    
     return 0;
 }
