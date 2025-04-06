@@ -87,7 +87,7 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshol
         int halfWidth = width / 2;
         int halfHeight = height / 2;
 
-        if (halfWidth < min_size || halfHeight < min_size) {
+        if (halfWidth*halfHeight < min_size) {
             node->isLeaf = true;
             return;
         }
