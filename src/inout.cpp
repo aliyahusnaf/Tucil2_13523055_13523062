@@ -94,7 +94,7 @@ void saveImage(const vector<vector<RGB>>& img, const std::string& filename) {
     }
 
     // Simpan gambar ke file
-    FreeImage_Save(FIF_PNG, bitmap, filename.c_str(), 0);
+    FreeImage_Save(FIF_JPEG, bitmap, filename.c_str(), JPEG_QUALITYGOOD);
 
     // Hapus bitmap dari memori
     FreeImage_Unload(bitmap);
