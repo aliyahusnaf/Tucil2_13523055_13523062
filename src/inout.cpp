@@ -5,12 +5,9 @@
 #include <queue>
 #include <sstream>
 #include <FreeImage.h> 
-#include "headers/json.hpp"
 #include "headers/inout.h"
 
-using json = nlohmann::json;
 using namespace std;
-int stepCounter = 0;
 
 vector<vector<RGB>> loadImage(const string& filename, int& width, int& height) {
 
@@ -122,11 +119,11 @@ void fillImageWithDepthLimit(std::vector<std::vector<RGB>>& image, Node* node, i
     }
 }
 
-void generateGifFromSteps(const std::string& frameDir, const std::string& gifPath) {
+void generateGif(const std::string& frameDir, const std::string& gifPath) {
 
     std::string cmd = "magick -delay 50 -loop 0 " + frameDir + "/step_*.png " + gifPath;
     int result = system(cmd.c_str());
     if (result != 0) {
-        std::cerr << "Error creating GIF. Make sure ImageMagick is installed." << std::endl;
+        std::cerr << "Error. Make sure ImageMagick is installed." << std::endl;
     }
 }

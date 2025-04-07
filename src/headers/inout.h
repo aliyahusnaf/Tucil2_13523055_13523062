@@ -6,7 +6,6 @@
 #include <string>
 
 using RGB = std::array<int, 3>;
-extern int stepCounter;
 
 struct Node {
     int x, y;
@@ -14,6 +13,8 @@ struct Node {
     RGB avgColor;
     bool isLeaf;
     Node* children[4];
+    Node* root;
+    std::vector<std::vector<RGB>> originalImage;  
 };
 
 std::vector<std::vector<RGB>> loadImage(const std::string& filename, int& width, int& height);

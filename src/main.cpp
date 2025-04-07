@@ -6,11 +6,9 @@
 #include <sstream>
 #include <vector>
 #include <FreeImage.h>
-#include "headers/json.hpp"
 #include "headers/inout.h"
 #include "headers/quadtree.h"
 #include "headers/errorcounter.h"
-using json = nlohmann::json;
 using namespace std;
 
 int main() {
@@ -20,8 +18,8 @@ int main() {
     
     cout << "Masukkan path gambar input absolut: ";
     cin >> image_path;
-    cout << "Metode Error : \n1. Variance \n2. MAD \n3. MaxDiff \n4. Entropy\n";
-    cout << "Pilih metode error (1,2,3,4): ";
+    cout << "1. Variance: 0 - 65025 \n2. MAD: 0 - 255 \n3. MaxDiff: 0 - 255 \n4. Entropy: 0 - 8 \n5. SSIM: -1 - 1 \n";
+    cout << "Pilih metode error (1,2,3,4,5): ";
     cin >> method;
     cout << "Masukkan threshold: ";
     cin >> threshold;
@@ -51,7 +49,7 @@ int main() {
     string stepFrameDir = "steps";
     bool gifMode = !output_gif_path.empty();
     
-    buildQuadtree(image, root, threshold, min_size, method, false);
+    buildQuadtree(image, root, root, threshold, min_size, method, false);
     
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
@@ -86,7 +84,7 @@ int main() {
         
         generateGifFrames(image, root, stepFrameDir);
         
-        generateGifFromSteps(stepFrameDir, output_gif_path);
+        generateGif(stepFrameDir, output_gif_path);
         cout << "GIF proses kompresi disimpan ke " << output_gif_path << endl;
     }
     

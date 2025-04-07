@@ -15,4 +15,6 @@ double calMaxDiff(const std::vector<std::vector<RGB>>& img, int x, int y, int wi
 
 double calEntropy(const std::vector<std::vector<RGB>>& img, int x, int y, int width, int height);
 
+double calSSIM(const std::vector<std::vector<RGB>>& imgRef, const std::vector<std::vector<RGB>>& img, int x, int y, int width, int height);
+
 #endif

@@ -5,15 +5,11 @@
 #include <queue>
 #include <FreeImage.h> 
 #include <sstream>
-#include "headers/json.hpp"
 #include "headers/quadtree.h"
 #include "headers/errorcounter.h"
 #include <functional> 
 
-using json = nlohmann::json;
 using namespace std;
-
-Node* rootNodeGlobal = nullptr;
 
 Node* createNode(int x, int y, int width, int height) {
     Node* node = new Node;
@@ -54,9 +50,13 @@ RGB avgColor(const vector<vector<RGB>>& img, int x, int y, int width, int height
 }
 
 // Bangun Quadtree dan simpan ke array of Node
-void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshold, int min_size,
+void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, double threshold, int min_size,
                    int errorMethod, bool createGIF) {
     if (node == nullptr) return;
+
+    if (node == root) {
+        node->originalImage = image;
+    }
 
     int x = node->x;
     int y = node->y;
@@ -65,7 +65,7 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshol
     node->avgColor = avgColor(image, x, y, width, height);
 
     double var;
-    if (errorMethod == 1) {
+     if (errorMethod == 1) {
         var = calVariance(image, x, y, width, height);
     } else if (errorMethod == 2) {
         var = calMAD(image, x, y, width, height);
@@ -73,6 +73,13 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshol
         var = calMaxDiff(image, x, y, width, height);
     } else if (errorMethod == 4) {
         var = calEntropy(image, x, y, width, height);
+    } else if (errorMethod == 5) {
+        if (root->originalImage.empty()) {
+            cerr << "Error: originalImage kosong!" << endl;
+            return;
+        }
+        var = calSSIM(root->originalImage, image, x, y, width, height);
+        //cout << "SSIM dihitung: " << var << endl;
     } else {
         cerr << "Error: Metode " << errorMethod << " tidak dikenal!" << endl;
         return;
@@ -81,9 +88,7 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshol
     bool isLeaf = (var <= threshold || width <= min_size || height <= min_size);
     node->isLeaf = isLeaf;
 
-    if (isLeaf) {
-        node->avgColor = avgColor(image, x, y, width, height);
-    } else {
+    if (!isLeaf) {
         int halfWidth = width / 2;
         int halfHeight = height / 2;
 
@@ -98,52 +103,11 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshol
         node->children[3] = createNode(x + halfWidth, y + halfHeight, width - halfWidth, height - halfHeight); // BR
 
         for (int i = 0; i < 4; ++i) {
-            buildQuadtree(image, node->children[i], threshold, min_size, errorMethod, createGIF);
+            buildQuadtree(image, node->children[i], root, threshold, min_size, errorMethod, createGIF);
         }
     }
 }
 
-void save_to_json(const Node* root, const string& filename) {
-    std::function<void(const Node*, json&)> writeNodeToJson = [&](const Node* node, json& jsonArray) {
-        if (node == nullptr) return;
-        
-        json node_json;
-        node_json["x"] = node->x;
-        node_json["y"] = node->y;
-        node_json["width"] = node->width;
-        node_json["height"] = node->height;
-        node_json["isLeaf"] = node->isLeaf;
-        
-        if (node->isLeaf) {
-            node_json["color"] = { node->avgColor[0], node->avgColor[1], node->avgColor[2] };
-        } else {
-            int childIndices[4] = {-1, -1, -1, -1};
-            for (int i = 0; i < 4; ++i) {
-                if (node->children[i] != nullptr) {
-                    childIndices[i] = jsonArray.size() + 1;
-                }
-            }
-            node_json["children"] = { childIndices[0], childIndices[1], childIndices[2], childIndices[3] };
-        }
-
-        jsonArray.push_back(node_json);
-    
-        for (int i = 0; i < 4; ++i) {
-            if (node->children[i] != nullptr) {
-                writeNodeToJson(node->children[i], jsonArray);
-            }
-        }
-    };
-    
-    json j;
-    j["nodes"] = json::array();
-
-    writeNodeToJson(root, j["nodes"]);
-    
-    ofstream out(filename);
-    out << j.dump(2);
-    out.close();
-}
 
 int getDepth(Node* node) {
     if (node == nullptr) return 0;
