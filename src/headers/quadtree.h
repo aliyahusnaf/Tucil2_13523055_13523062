@@ -8,7 +8,7 @@
 
 Node* createNode(int x, int y, int width, int height);
 
-void buildQuadtree(const std::vector<std::vector<RGB>>& image, Node* node, Node* root, double threshold, int min_size,
+void buildQuadtree(const std::vector<std::vector<RGB>>& image, Node* node, double threshold, int min_size,
                    int errorMethod, bool createGIF);
 
 int getDepth(Node* node);

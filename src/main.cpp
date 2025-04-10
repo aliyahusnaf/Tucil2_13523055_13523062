@@ -56,9 +56,7 @@ int main() {
 
     string stepFrameDir = "steps";
     bool gifMode = !output_gif_path.empty();
-    vector<vector<RGB>> originalImage = image;
-    root->originalImage = originalImage;
-    buildQuadtree(image, root, root, threshold, min_size, method, false);
+    buildQuadtree(image, root, threshold, min_size, method, false);
     
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;

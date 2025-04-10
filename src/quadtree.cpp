@@ -51,7 +51,7 @@ RGB avgColor(const vector<vector<RGB>>& img, int x, int y, int width, int height
 }
 
 // Bangun Quadtree dan simpan ke array of Node
-void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, double threshold, int min_size,
+void buildQuadtree(const vector<vector<RGB>>& image, Node* node, double threshold, int min_size,
                    int errorMethod, bool createGIF) {
     if (node == nullptr) return;
 
@@ -71,12 +71,8 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, dou
     } else if (errorMethod == 4) {
         var = calEntropy(image, x, y, width, height);
     } else if (errorMethod == 5) {
-        if (root->originalImage.empty()) {
-            cerr << "Error: originalImage kosong!" << endl;
-            return;
-        }
         vector<vector<RGB>> avgBlock(height, vector<RGB>(width, node->avgColor));
-        var = 1.0 - calSSIM(root->originalImage, avgBlock, x, y, width, height);
+        var = 1.0 - calSSIM(image, avgBlock, x, y, width, height);
     } else {
         cerr << "Error: Metode " << errorMethod << " tidak dikenal!" << endl;
         return;
@@ -100,7 +96,7 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, dou
         node->children[3] = createNode(x + halfWidth, y + halfHeight, width - halfWidth, height - halfHeight); // BR
 
         for (int i = 0; i < 4; ++i) {
-            buildQuadtree(image, node->children[i], root, threshold, min_size, errorMethod, createGIF);
+            buildQuadtree(image, node->children[i], threshold, min_size, errorMethod, createGIF);
         }
     }
 }

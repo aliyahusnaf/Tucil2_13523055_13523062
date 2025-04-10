@@ -13,8 +13,6 @@ struct Node {
     RGB avgColor;
     bool isLeaf;
     Node* children[4];
-    Node* root;
-    std::vector<std::vector<RGB>> originalImage;  
 };
 
 std::vector<std::vector<RGB>> loadImage(const std::string& filename, int& width, int& height);
