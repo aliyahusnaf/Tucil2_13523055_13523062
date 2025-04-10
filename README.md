@@ -46,6 +46,7 @@ Pastikan sudah memiliki g++ (C++17 atau lebih tinggi) dan sudah menginstall libr
 1. Buka tautan https://imagemagick.org/script/download.php#windows
 2. Pilih "ImageMagick-7.x.x-Q16-HDRI-x64-dll.exe" sesuai dengan versi 64-bit laptop/PC
 3. Install dengan centang opsi: ✅ Install legacy utilities (convert) dan ✅ Add application directory to your system PATH
+
 Catatan: tidak usah menginstall library freeimage karena sudah di automatisasi melalui penggunaan file bat
 
 ### MacOS
