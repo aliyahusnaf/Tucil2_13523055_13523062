@@ -129,22 +129,11 @@ string getValidatedGifPath() {
 
 double getValidatedThreshold(int method) {
     double threshold;
-    double minVal = 0, maxVal = 1;
-
-    switch (method) {
-        case 1: maxVal = 65025; break;
-        case 2:
-        case 3: maxVal = 255; break;
-        case 4: maxVal = 8; break;
-        case 5: maxVal = 1; break;
-        default:
-            cout << "Metode tidak valid. Default range digunakan (0-1).\n";
-    }
 
     while (true) {
-        cout << "Masukkan threshold (" << minVal << " - " << maxVal << "): ";
+        cout << "Masukkan threshold (>= 0): ";
         cin >> threshold;
-        if (threshold < minVal || threshold > maxVal) {
+        if (threshold < 0) {
             cout << "Threshold di luar range.\n";
         } else {
             return threshold;
