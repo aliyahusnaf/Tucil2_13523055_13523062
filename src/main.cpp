@@ -78,9 +78,14 @@ int main() {
     cout << "Banyak simpul: " << nodeCount << endl;
 
     if (gifMode) {
-        system(("rmdir /S /Q " + stepFrameDir).c_str());
-        system(("mkdir " + stepFrameDir).c_str());
-
+        #ifdef _WIN32
+            system(("rmdir /S /Q " + stepFrameDir).c_str());
+            system(("mkdir " + stepFrameDir).c_str());
+        #else
+            system(("rm -rf " + stepFrameDir).c_str());
+            system(("mkdir -p " + stepFrameDir).c_str());
+        #endif
+    
         generateGifFrames(image, root, stepFrameDir);
         generateGif(stepFrameDir, output_gif_path);
         cout << "GIF proses kompresi disimpan ke " << output_gif_path << endl;
