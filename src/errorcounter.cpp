@@ -4,11 +4,9 @@
 #include <fstream>
 #include <queue>
 #include <FreeImage.h> 
-#include "headers/json.hpp"
 #include "headers/inout.h"
 #include "headers/errorcounter.h"
 
-using json = nlohmann::json;
 using namespace std;
 
 // Hitung variance dalam blok RGB
