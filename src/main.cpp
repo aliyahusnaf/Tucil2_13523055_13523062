@@ -5,7 +5,7 @@
 #include <queue>
 #include <sstream>
 #include <vector>
-#include <chrono> // Untuk menghitung waktu eksekusi
+#include <chrono> 
 #include <FreeImage.h>
 #include "headers/inout.h"
 #include "headers/quadtree.h"
@@ -14,10 +14,9 @@
 
 using namespace std;
 
-// Fungsi untuk menghitung ukuran file dalam byte
 long long getFileSize(const string& filename) {
     ifstream file(filename, ios::binary | ios::ate);
-    return file.is_open() ? static_cast<long long>(file.tellg()) : -1; // -1 jika gagal membaca file
+    return file.is_open() ? static_cast<long long>(file.tellg()) : -1; 
 }
 
 int main() {
@@ -89,6 +88,12 @@ int main() {
         generateGifFrames(image, root, stepFrameDir);
         generateGif(stepFrameDir, output_gif_path);
         cout << "GIF proses kompresi disimpan ke " << output_gif_path << endl;
+
+        #ifdef _WIN32
+            system(("rmdir /S /Q " + stepFrameDir).c_str());
+        #else
+            system(("rm -rf " + stepFrameDir).c_str());
+        #endif
     }
 
     return 0;
