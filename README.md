@@ -99,28 +99,4 @@ Program akan meminta input dari pengguna sebagai berikut:
 | Name | NIM | Kelas |
 |------|------|------|
 | Muhammad Timur Kanigara | 13523055 | K01 |
-| Aliya Husna Fayyaxa | 13523062 | K02 |
-
-## Note
-Jika memakai MacOS, silahkan ganti bagian
-```bash
-    if (gifMode) {
-        system(("rmdir /S /Q " + stepFrameDir).c_str());
-        system(("mkdir " + stepFrameDir).c_str());
-
-        generateGifFrames(image, root, stepFrameDir);
-        generateGif(stepFrameDir, output_gif_path);
-        cout << "GIF proses kompresi disimpan ke " << output_gif_path << endl;
-    }
-```
-menjadi
-```bash
-    if (gifMode) {
-        system(("rm -rf " + stepFrameDir).c_str());
-        system(("mkdir -p " + stepFrameDir).c_str());
-
-        generateGifFrames(image, root, stepFrameDir);
-        generateGif(stepFrameDir, output_gif_path);
-        cout << "GIF proses kompresi disimpan ke " << output_gif_path << endl;
-    }
-```
+| Aliya Husna Fayyaza | 13523062 | K02 |
