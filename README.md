@@ -102,7 +102,7 @@ Program akan meminta input dari pengguna sebagai berikut:
 | Aliya Husna Fayyaxa | 13523062 | K02 |
 
 ## Note
-Jika memakai MacOS, silahkan ganti bagian
+Jika memakai Linux atau MacOS, silakan ganti bagian ini di main.cpp
 ```bash
     if (gifMode) {
         system(("rmdir /S /Q " + stepFrameDir).c_str());
