@@ -3,11 +3,10 @@
 #include <cmath>
 #include <fstream>
 #include <queue>
+#include <sstream>
 #include <FreeImage.h> 
-#include "headers/json.hpp"
 #include "headers/inout.h"
 
-using json = nlohmann::json;
 using namespace std;
 
 vector<vector<RGB>> loadImage(const string& filename, int& width, int& height) {
@@ -49,7 +48,6 @@ FIBITMAP* bitmap = FreeImage_Load(fif, filename.c_str());
     return image;
 }
 
-
 void fillImage(vector<vector<RGB>> &img, const Node* node) {
     if (node == nullptr) return;
     
@@ -59,14 +57,12 @@ void fillImage(vector<vector<RGB>> &img, const Node* node) {
         RGB color = node->avgColor;
         for (int i = y; i < y + height; i++) {
             for (int j = x; j < x + width; j++) {
-                // Pastikan tidak melebihi batas gambar
                 if (i < img.size() && j < img[0].size()) {
                     img[i][j] = color;
                 }
             }
         }
     } else {
-        // Rekursi untuk setiap anak node
         for (int i = 0; i < 4; i++) {
             if (node->children[i] != nullptr) {
                 fillImage(img, node->children[i]);
@@ -95,8 +91,39 @@ void saveImage(const vector<vector<RGB>>& img, const std::string& filename) {
     }
 
     // Simpan gambar ke file
-    FreeImage_Save(FIF_PNG, bitmap, filename.c_str(), 0);
+    FreeImage_Save(FIF_JPEG, bitmap, filename.c_str(), JPEG_QUALITYGOOD);
 
     // Hapus bitmap dari memori
     FreeImage_Unload(bitmap);
+}
+
+
+void fillImageWithDepthLimit(std::vector<std::vector<RGB>>& image, Node* node, int maxDepth, int currentDepth) {
+    if (node == nullptr) return;
+    
+    if (node->isLeaf || currentDepth >= maxDepth) {
+        RGB color = node->avgColor;
+        for (int y = 0; y < node->height; y++) {
+            for (int x = 0; x < node->width; x++) {
+                if (node->y + y < image.size() && node->x + x < image[0].size()) {
+                    image[node->y + y][node->x + x] = color;
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < 4; i++) {
+            if (node->children[i] != nullptr) {
+                fillImageWithDepthLimit(image, node->children[i], maxDepth, currentDepth + 1);
+            }
+        }
+    }
+}
+
+void generateGif(const std::string& frameDir, const std::string& gifPath) {
+
+    std::string cmd = "magick -delay 50 -loop 0 " + frameDir + "/step_*.png " + gifPath;
+    int result = system(cmd.c_str());
+    if (result != 0) {
+        std::cerr << "Error. Make sure ImageMagick is installed." << std::endl;
+    }
 }

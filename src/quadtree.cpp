@@ -4,11 +4,12 @@
 #include <fstream>
 #include <queue>
 #include <FreeImage.h> 
-#include "headers/json.hpp"
+#include <sstream>
+#include <iomanip>
 #include "headers/quadtree.h"
 #include "headers/errorcounter.h"
+#include <functional> 
 
-using json = nlohmann::json;
 using namespace std;
 
 Node* createNode(int x, int y, int width, int height) {
@@ -50,20 +51,18 @@ RGB avgColor(const vector<vector<RGB>>& img, int x, int y, int width, int height
 }
 
 // Bangun Quadtree dan simpan ke array of Node
-void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, double threshold, int min_size, int errorMethod) {
+void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, double threshold, int min_size,
+                   int errorMethod, bool createGIF) {
     if (node == nullptr) return;
-
-    if (node == root) { // Pastikan hanya root asli yang menyimpan originalImage
-        node->originalImage = image;
-    }
 
     int x = node->x;
     int y = node->y;
     int width = node->width;
     int height = node->height;
-    
+    node->avgColor = avgColor(image, x, y, width, height);
+
     double var;
-    if (errorMethod == 1) {
+     if (errorMethod == 1) {
         var = calVariance(image, x, y, width, height);
     } else if (errorMethod == 2) {
         var = calMAD(image, x, y, width, height);
@@ -76,80 +75,36 @@ void buildQuadtree(const vector<vector<RGB>>& image, Node* node, Node* root, dou
             cerr << "Error: originalImage kosong!" << endl;
             return;
         }
-        var = calSSIM(root->originalImage, image, x, y, width, height);
-        //cout << "SSIM dihitung: " << var << endl;
+        vector<vector<RGB>> avgBlock(height, vector<RGB>(width, node->avgColor));
+        var = 1.0 - calSSIM(root->originalImage, avgBlock, x, y, width, height);
     } else {
         cerr << "Error: Metode " << errorMethod << " tidak dikenal!" << endl;
         return;
     }
-    
+
     bool isLeaf = (var <= threshold || width <= min_size || height <= min_size);
     node->isLeaf = isLeaf;
-    
-    if (isLeaf) {
-        node->avgColor = avgColor(image, x, y, width, height);
-    } else {
+
+    if (!isLeaf) {
         int halfWidth = width / 2;
         int halfHeight = height / 2;
-        
-        if (halfWidth < min_size || halfHeight < min_size) {
+
+        if (halfWidth*halfHeight < min_size) {
             node->isLeaf = true;
-            node->avgColor = avgColor(image, x, y, width, height);
             return;
         }
-        
+
         node->children[0] = createNode(x, y, halfWidth, halfHeight); // TL
         node->children[1] = createNode(x + halfWidth, y, width - halfWidth, halfHeight); // TR
         node->children[2] = createNode(x, y + halfHeight, halfWidth, height - halfHeight); // BL
         node->children[3] = createNode(x + halfWidth, y + halfHeight, width - halfWidth, height - halfHeight); // BR
-        
+
         for (int i = 0; i < 4; ++i) {
-            buildQuadtree(image, node->children[i], root, threshold, min_size, errorMethod);
+            buildQuadtree(image, node->children[i], root, threshold, min_size, errorMethod, createGIF);
         }
     }
 }
 
-void save_to_json(const Node* root, const string& filename) {
-    std::function<void(const Node*, json&)> writeNodeToJson = [&](const Node* node, json& jsonArray) {
-        if (node == nullptr) return;
-        
-        json node_json;
-        node_json["x"] = node->x;
-        node_json["y"] = node->y;
-        node_json["width"] = node->width;
-        node_json["height"] = node->height;
-        node_json["isLeaf"] = node->isLeaf;
-        
-        if (node->isLeaf) {
-            node_json["color"] = { node->avgColor[0], node->avgColor[1], node->avgColor[2] };
-        } else {
-            int childIndices[4] = {-1, -1, -1, -1};
-            for (int i = 0; i < 4; ++i) {
-                if (node->children[i] != nullptr) {
-                    childIndices[i] = jsonArray.size() + 1;
-                }
-            }
-            node_json["children"] = { childIndices[0], childIndices[1], childIndices[2], childIndices[3] };
-        }
-
-        jsonArray.push_back(node_json);
-    
-        for (int i = 0; i < 4; ++i) {
-            if (node->children[i] != nullptr) {
-                writeNodeToJson(node->children[i], jsonArray);
-            }
-        }
-    };
-    
-    json j;
-    j["nodes"] = json::array();
-
-    writeNodeToJson(root, j["nodes"]);
-    
-    ofstream out(filename);
-    out << j.dump(2);
-    out.close();
-}
 
 int getDepth(Node* node) {
     if (node == nullptr) return 0;
@@ -162,11 +117,27 @@ int getDepth(Node* node) {
     return 1 + maxDepth;
 }
 
-int getNodes(Node* node) {
-    if (node == nullptr) return 0;
-    int count = 1; // Hitung node ini sendiri
-    for (int i = 0; i < 4; i++) {
-        count += getNodes(node->children[i]);
+int countNodes(Node* node) {
+    if (!node) return 0;
+    int count = 1;
+    for (int i = 0; i < 4; ++i) {
+        count += countNodes(node->children[i]);
     }
     return count;
+}
+
+void generateGifFrames(const std::vector<std::vector<RGB>>& originalImage, Node* root, const std::string& frameDir) {
+   
+    int maxDepth = getDepth(root);
+    
+    for (int depth = 0; depth <= maxDepth; depth++) {
+       
+        std::vector<std::vector<RGB>> frame(originalImage.size(), std::vector<RGB>(originalImage[0].size()));
+        
+        fillImageWithDepthLimit(frame, root, depth);
+        
+        std::stringstream ss;
+        ss << frameDir << "/step_" << std::setw(4) << std::setfill('0') << depth << ".png";
+        saveImage(frame, ss.str());
+    }
 }

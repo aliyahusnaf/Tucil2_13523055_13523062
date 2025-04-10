@@ -122,98 +122,69 @@ double calEntropy(const vector<vector<RGB>>& img, int x, int y, int width, int h
     
     // Rata-rata entropy dari tiga kanal
     double entropy = (entropyR + entropyG + entropyB) / 3.0;
-    
-    // Debug: Cek hasil entropy sebelum thresholding
-    //std::cout << "Entropy at (" << x << "," << y << ") size " << width << "x" << height << " = " << entropy << std::endl;
-    
+
     return entropy;
 }
 
-// Fungsi untuk menghitung SSIM dalam satu blok RGB
-double calSSIM(const vector<vector<RGB>>& imgRef, const vector<vector<RGB>>& img, int x, int y, int width, int height) {
+double calSSIM(const vector<vector<RGB>>& imgRef, const vector<vector<RGB>>& imgPred, int x, int y, int width, int height) {
     if (imgRef.empty() || imgRef[0].empty()) {
         std::cout << "imgRef kosong! SSIM tidak bisa dihitung." << std::endl;
-        return 0.0; // Return default SSIM
+        return 0.0;
     }
+
     const double C1 = (0.01 * 255) * (0.01 * 255);
     const double C2 = (0.03 * 255) * (0.03 * 255);
     const double wR = 0.2989, wG = 0.5870, wB = 0.1140;
-
     int N = width * height;
 
-    // double sumRefR = 0, sumRefG = 0, sumRefB = 0;
-    // double sumImgR = 0, sumImgG = 0, sumImgB = 0;
+    std::vector<double> sumRef(3, 0.0), sumPred(3, 0.0);
+    std::vector<double> varRef(3, 0.0), varPred(3, 0.0), cov(3, 0.0);
 
-    // double varRefR = 0, varRefG = 0, varRefB = 0;
-    // double varImgR = 0, varImgG = 0, varImgB = 0;
-    // double covR = 0, covG = 0, covB = 0;
-    std::vector<double> sumRef(3, 0.0), sumImg(3, 0.0);
-    std::vector<double> varRef(3, 0.0), varImg(3, 0.0), cov(3, 0.0);
+    for (int i = 0; i < height && y + i < imgRef.size(); ++i) {
+        for (int j = 0; j < width && x + j < imgRef[0].size(); ++j) {
+            const RGB& ref = imgRef[y + i][x + j];
+            const RGB& pred = imgPred[i][j];
 
-    for (int i = y; i < y + height && i < img.size(); i++) {
-        for (int j = x; j < x + width && j < img[0].size(); j++) {
-            sumRef[0] += imgRef[i][j][0];
-            sumRef[1] += imgRef[i][j][1];
-            sumRef[2] += imgRef[i][j][2];
-
-            sumImg[0] += img[i][j][0];
-            sumImg[1] += img[i][j][1];
-            sumImg[2] += img[i][j][2];
+            for (int c = 0; c < 3; ++c) {
+                sumRef[c] += ref[c];
+                sumPred[c] += pred[c];
+            }
         }
     }
 
-    double meanRefR = sumRef[0] / (double)N;
-    double meanRefG = sumRef[1] / (double)N;
-    double meanRefB = sumRef[2] / (double)N;
+    std::vector<double> meanRef(3), meanPred(3);
+    for (int c = 0; c < 3; ++c) {
+        meanRef[c] = sumRef[c] / N;
+        meanPred[c] = sumPred[c] / N;
+    }
 
-    double meanImgR = sumImg[0] / (double)N;
-    double meanImgG = sumImg[1] / (double)N;
-    double meanImgB = sumImg[2] / (double)N;
+    for (int i = 0; i < height && y + i < imgRef.size(); ++i) {
+        for (int j = 0; j < width && x + j < imgRef[0].size(); ++j) {
+            const RGB& ref = imgRef[y + i][x + j];
+            const RGB& pred = imgPred[i][j];
 
-    for (int i = y; i < y + height && i < img.size(); i++) {
-        for (int j = x; j < x + width && j < img[0].size(); j++) {
-            double diffRefR = imgRef[i][j][0] - meanRefR;
-            double diffRefG = imgRef[i][j][1] - meanRefG;
-            double diffRefB = imgRef[i][j][2] - meanRefB;
+            for (int c = 0; c < 3; ++c) {
+                double diffRef = ref[c] - meanRef[c];
+                double diffPred = pred[c] - meanPred[c];
 
-            double diffImgR = img[i][j][0] - meanImgR;
-            double diffImgG = img[i][j][1] - meanImgG;
-            double diffImgB = img[i][j][2] - meanImgB;
-
-            varRef[0] += diffRefR * diffRefR;
-            varRef[1] += diffRefG * diffRefG;
-            varRef[2] += diffRefB * diffRefB;
-
-            varImg[0] += diffImgR * diffImgR;
-            varImg[1] += diffImgG * diffImgG;
-            varImg[2] += diffImgB * diffImgB;
-
-            cov[0] += diffRefR * diffImgR;
-            cov[1] += diffRefG * diffImgG;
-            cov[2] += diffRefB * diffImgB;
+                varRef[c] += diffRef * diffRef;
+                varPred[c] += diffPred * diffPred;
+                cov[c] += diffRef * diffPred;
+            }
         }
     }
 
-    varRef[0] /= N - 1;
-    varRef[1] /= N - 1;
-    varRef[2] /= N - 1;
+    for (int c = 0; c < 3; ++c) {
+        varRef[c] /= (N - 1);
+        varPred[c] /= (N - 1);
+        cov[c] /= (N - 1);
+    }
 
-    varImg[0] /= N - 1;
-    varImg[1] /= N - 1;
-    varImg[2] /= N - 1;
+    double ssim[3];
+    for (int c = 0; c < 3; ++c) {
+        ssim[c] = ((2 * meanRef[c] * meanPred[c] + C1) * (2 * cov[c] + C2)) /
+                  ((meanRef[c] * meanRef[c] + meanPred[c] * meanPred[c] + C1) * (varRef[c] + varPred[c] + C2));
+    }
 
-    cov[0] /= N - 1;
-    cov[1] /= N - 1;
-    cov[2] /= N - 1;
-
-    double ssimR = ((2 * meanRefR * meanImgR + C1) * (2 * cov[0] + C2)) /
-                   ((meanRefR * meanRefR + meanImgR * meanImgR + C1) * (varRef[0] + varImg[0] + C2));
-
-    double ssimG = ((2 * meanRefG * meanImgG + C1) * (2 * cov[1] + C2)) /
-                   ((meanRefG * meanRefG + meanImgG * meanImgG + C1) * (varRef[1] + varImg[1] + C2));
-
-    double ssimB = ((2 * meanRefB * meanImgB + C1) * (2 * cov[2] + C2)) /
-                   ((meanRefB * meanRefB + meanImgB * meanImgB + C1) * (varRef[2] + varImg[2] + C2));
-
-    return wR * ssimR + wG * ssimG + wB * ssimB;
+    return wR * ssim[0] + wG * ssim[1] + wB * ssim[2];
 }
