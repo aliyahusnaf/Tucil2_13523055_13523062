@@ -12,6 +12,7 @@
 ```
 Tucil2_13523055_13523062/
 ├── bin/
+│   ├── main.o   
 ├── doc/
 ├── library/
 │   ├── include/
@@ -66,15 +67,14 @@ Clone repository ini lalu,
 ### Linux
 Jalankan command ini pada terminal (sesuaikan versi c++):
 ```bash
-cd src
-g++ -std=c++17 main.cpp quadtree.cpp errorcounter.cpp inout.cpp -o main -lfreeimage
+cd bin
+./main
 ```
 ### MacOS
 Jalankan command ini pada terminal (sesuaikan versi c++ dan direktori freeimage):
 ```bash
-cd src
-g++ -std=c++17 main.cpp quadtree.cpp errorcounter.cpp inout.cpp -o main \
-    -I/opt/homebrew/include -L/opt/homebrew/lib -lfreeimage
+cd bin
+./main
 ```
 ### Windows
 Jalankan command ini pada terminal (untuk 32 bit):
