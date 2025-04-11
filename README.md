@@ -76,7 +76,7 @@ Jalankan command ini pada terminal (sesuaikan versi c++ dan direktori freeimage)
 cd bin
 ./main
 ```
-### Windows
+### Windows (HARUS COMPILE ULANG)
 Jalankan command ini pada terminal (untuk 32 bit):
 ```bash
 ./build-x32.bat
@@ -84,6 +84,11 @@ Jalankan command ini pada terminal (untuk 32 bit):
 Jalankan command ini pada terminal (untuk 64 bit):
 ```bash
 ./build-x64.bat
+```
+Kemudian jalankan command ini:
+```bash
+cd bin
+./main.exe
 ```
 
 ## Pemakaian
