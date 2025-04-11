@@ -78,10 +78,8 @@ int main() {
 
     if (gifMode) {
         #ifdef _WIN32
-            system(("rmdir /S /Q " + stepFrameDir).c_str());
             system(("mkdir " + stepFrameDir).c_str());
         #else
-            system(("rm -rf " + stepFrameDir).c_str());
             system(("mkdir -p " + stepFrameDir).c_str());
         #endif
     
